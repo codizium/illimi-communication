@@ -1,0 +1,25 @@
+{
+  "name": "codizium/illimi-communication",
+  "description": "iLLIMI Edu-Suites - communication Module",
+  "type": "library",
+  "license": "proprietary",
+  "require": {
+    "php": "^8.2",
+    "codizium/codizium-core": "dev-main"
+  },
+  "autoload": {
+    "psr-4": {
+      "Illimi\\Communication\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Illimi\\Communication\\CommunicationServiceProvider"
+      ]
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "version": "dev-main"
+}
