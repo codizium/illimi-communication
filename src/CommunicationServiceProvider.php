@@ -10,6 +10,10 @@ class CommunicationServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton('illimi-communication', function () {
+            return new IllimiCommunication();
+        });
+
         $this->mergeConfigFrom(
             __DIR__ . '/../config/communication.php',
             'illimi-communication'

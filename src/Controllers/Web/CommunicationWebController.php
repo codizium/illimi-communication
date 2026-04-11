@@ -2,6 +2,7 @@
 
 namespace Illimi\Communication\Controllers\Web;
 
+use Codizium\Core\Models\Organization;
 use Codizium\Core\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -12,16 +13,17 @@ use Illimi\Communication\Resources\NoticePostResource;
 
 class CommunicationWebController
 {
-    protected function availableUsers()
+    protected function availableUsers(Organization $org)
     {
         return User::query()
             ->with('roles')
             ->where('id', '!=', auth()->id())
+            ->where('organization_id', $org->id)
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'phone', 'organization_id'])
-            ->reject(fn (User $user) => $user->hasRole('student'))
+            ->reject(fn(User $user) => $user->hasRole('student'))
             ->values()
-            ->map(fn (User $user) => [
+            ->map(fn(User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
@@ -32,11 +34,11 @@ class CommunicationWebController
             ]);
     }
 
-    public function messenger(): View
+    public function messenger(Organization $org): View
     {
         return view('illimi-communication::pages.messenger', [
             'apiBase' => '/api/v1/communication',
-            'availableUsers' => $this->availableUsers(),
+            'availableUsers' => $this->availableUsers($org),
         ]);
     }
 
@@ -48,8 +50,8 @@ class CommunicationWebController
             ->get();
 
         $calendarGroups = $events
-            ->groupBy(fn (BlogEvent $event) => optional($event->starts_at)->format('F Y') ?: 'Unscheduled')
-            ->map(fn ($items, $label) => [
+            ->groupBy(fn(BlogEvent $event) => optional($event->starts_at)->format('F Y') ?: 'Unscheduled')
+            ->map(fn($items, $label) => [
                 'label' => $label,
                 'count' => $items->count(),
                 'summary' => $items->take(3)->map(function (BlogEvent $event) {

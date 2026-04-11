@@ -404,7 +404,7 @@
                     <iconify-icon icon="solar:alt-arrow-left-linear"></iconify-icon>
                 </button>
                 <div class="img">
-                    <img src="{{ asset('assets/images/chat/11.png') }}" alt="Conversation" id="conversationAvatar">
+                    <img src="{{ asset('assets/images/logo-icon.png') }}" alt="Conversation" id="conversationAvatar">
                 </div>
                 <div class="info">
                     <h6 class="text-md mb-0" id="conversationTitle">Select a conversation</h6>
@@ -542,7 +542,7 @@
             const newConversationForm = document.getElementById('newConversationForm');
             const apiBase = root?.dataset.apiBase || '{{ $apiBase }}';
             const currentUserId = root?.dataset.currentUserId || '';
-            const defaultAvatar = `{{ asset('assets/images/chat/11.png') }}`;
+            const defaultAvatar = `{{ asset('assets/images/logo-icon.png') }}`;
             const notificationSoundSrc = `{{ asset('sounds/notification-01.mp3') }}`;
             const bootstrapModal = window.bootstrap?.Modal;
             const onlineUsers = new Map();
