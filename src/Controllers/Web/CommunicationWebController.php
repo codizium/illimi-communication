@@ -15,8 +15,7 @@ class CommunicationWebController
 {
     protected function availableUsers(Organization $org)
     {
-        return User::query()
-            ->with('roles')
+        return User::with('roles')
             ->where('id', '!=', auth()->id())
             ->where('organization_id', $org->id)
             ->orderBy('name')
