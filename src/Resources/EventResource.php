@@ -12,9 +12,10 @@ class EventResource extends JsonResource
         return [
             'id' => $this->id,
             'organization_id' => $this->organization_id,
-            'blog_post_id' => $this->blog_post_id,
             'title' => $this->title,
             'description' => $this->description,
+            'category' => $this->category,
+            'status' => $this->status,
             'starts_at' => $this->starts_at?->toIso8601String(),
             'ends_at' => $this->ends_at?->toIso8601String(),
             'location' => $this->location,

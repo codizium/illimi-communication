@@ -14,6 +14,7 @@ class NoticePostResource extends JsonResource
             'organization_id' => $this->organization_id,
             'title' => $this->title,
             'description' => $this->description,
+            'category' => $this->category,
             'published_at' => $this->published_at?->toIso8601String(),
             'is_pinned' => (bool) $this->is_pinned,
             'created_by' => $this->created_by,

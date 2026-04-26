@@ -6,6 +6,8 @@ use Codizium\Core\Models\Organization;
 use Codizium\Core\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illimi\Communication\Models\BlogEvent;
 use Illimi\Communication\Models\NoticePost;
 use Illimi\Communication\Resources\EventResource;
@@ -13,35 +15,14 @@ use Illimi\Communication\Resources\NoticePostResource;
 
 class CommunicationWebController
 {
-    protected function availableUsers(Organization $org)
+    public function messenger(Organization $org): \Inertia\Response
     {
-        return User::with('roles')
-            ->where('id', '!=', auth()->id())
-            ->where('organization_id', $org->id)
-            ->orderBy('name')
-            ->get(['id', 'name', 'email', 'phone', 'organization_id'])
-            ->reject(fn(User $user) => $user->hasRole('student'))
-            ->values()
-            ->map(fn(User $user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'avatar_url' => $user->getAttachmentUrl('avatar') ?: $user->getAttachmentUrl('profile-icon'),
-                'organization_id' => $user->organization_id,
-                'roles' => method_exists($user, 'roles') ? $user->roles->pluck('name')->values()->all() : [],
-            ]);
-    }
-
-    public function messenger(Organization $org): View
-    {
-        return view('illimi-communication::pages.messenger', [
+        return \Inertia\Inertia::render('Communication/Messenger', [
             'apiBase' => '/api/v1/communication',
-            'availableUsers' => $this->availableUsers($org),
         ]);
     }
 
-    public function events(): View
+    public function events(): \Inertia\Response
     {
         $events = BlogEvent::query()
             ->with('creator')
@@ -63,7 +44,7 @@ class CommunicationWebController
             ])
             ->values();
 
-        return view('illimi-communication::pages.events', [
+        return \Inertia\Inertia::render('Communication/Events', [
             'apiBase' => '/api/v1/communication',
             'events' => $events,
             'calendarGroups' => $calendarGroups,
@@ -71,7 +52,7 @@ class CommunicationWebController
         ]);
     }
 
-    public function noticeboard(): View
+    public function noticeboard(): \Inertia\Response
     {
         $notices = NoticePost::query()
             ->with('creator')
@@ -80,7 +61,7 @@ class CommunicationWebController
             ->orderByDesc('created_at')
             ->get();
 
-        return view('illimi-communication::pages.noticeboard', [
+        return \Inertia\Inertia::render('Communication/Noticeboard', [
             'apiBase' => '/api/v1/communication',
             'notices' => $notices,
             'noticePayload' => NoticePostResource::collection($notices)->resolve(),

@@ -29,8 +29,6 @@ class ConversationParticipantResource extends JsonResource
             'user' => $this->whenLoaded('user', fn () => [
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
-                'email' => $this->user?->email,
-                'phone' => $this->user?->phone,
                 'avatar_url' => $this->user?->getAttachmentUrl('avatar')
                     ?: $this->user?->getAttachmentUrl('profile-icon'),
             ]),

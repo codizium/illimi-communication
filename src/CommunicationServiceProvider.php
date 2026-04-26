@@ -14,6 +14,8 @@ class CommunicationServiceProvider extends ServiceProvider
             return new IllimiCommunication();
         });
 
+        $this->app->register(Providers\EventServiceProvider::class);
+
         $this->mergeConfigFrom(
             __DIR__ . '/../config/communication.php',
             'illimi-communication'

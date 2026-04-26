@@ -5,6 +5,8 @@ namespace Illimi\Communication\Controllers\V1;
 use Codizium\Core\Controllers\BaseController;
 use Codizium\Core\Helpers\CoreJsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Codizium\Core\Models\User;
 use Illimi\Communication\Events\CommunicationEntityChanged;
 use Illimi\Communication\Requests\SendMessageRequest;
 use Illimi\Communication\Requests\StartConversationRequest;
@@ -109,6 +111,56 @@ class ConversationController extends BaseController
         event(new CommunicationEntityChanged('conversation', 'archived', $payload));
 
         return $this->response->success(new ConversationResource($conversation), 'Conversation archived successfully');
+    }
+
+    public function clearMessages(string $id)
+    {
+        $success = $this->service->clearMessages($id);
+        return $success 
+            ? $this->response->success(null, 'Messages cleared successfully')
+            : $this->response->error('Failed to clear messages');
+    }
+
+    public function destroy(string $id)
+    {
+        $success = $this->service->deleteConversation($id);
+        return $success 
+            ? $this->response->success(null, 'Conversation deleted successfully')
+            : $this->response->error('Failed to delete conversation');
+    }
+
+    public function searchUsers(Request $request)
+    {
+        $query = $request->query('q');
+        if (!$query || strlen($query) < 2) {
+            return $this->response->success([], 'Query too short');
+        }
+
+        $organizationId = $request->get('organization_id') ?: auth()->user()?->organization_id;
+        $cacheKey = "communication:user_search:{$organizationId}:" . md5(strtolower($query));
+
+        $users = Cache::remember($cacheKey, 60, function () use ($query, $organizationId) {
+            $presenceService = app(PresenceService::class);
+            return User::query()
+                ->where('organization_id', $organizationId)
+                ->where('id', '!=', auth()->id())
+                ->where(function ($q) use ($query) {
+                    $q->where('name', 'like', "%{$query}%")
+                        ->orWhere('email', 'like', "%{$query}%");
+                })
+                ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'student'))
+                ->limit(10)
+                ->get(['id', 'name', 'email', 'organization_id'])
+                ->map(fn ($user) => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar_url' => $user->getAttachmentUrl('avatar') ?: $user->getAttachmentUrl('profile-icon'),
+                    'is_online' => $presenceService->status($user->id, $user->organization_id)['is_online'],
+                ]);
+        });
+
+        return $this->response->success($users, 'Users retrieved successfully');
     }
 
     public function heartbeat(Request $request)

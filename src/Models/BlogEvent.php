@@ -18,6 +18,8 @@ class BlogEvent extends BaseModel
         'blog_post_id',
         'title',
         'description',
+        'category',
+        'status',
         'starts_at',
         'ends_at',
         'location',

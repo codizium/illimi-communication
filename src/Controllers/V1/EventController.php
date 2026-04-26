@@ -34,4 +34,23 @@ class EventController extends BaseController
 
         return $this->response->success(new EventResource($event), 'Event created successfully', 201);
     }
+
+    public function update(Request $request, string $id)
+    {
+        $event = $this->service->updateEvent($id, $request->all());
+        $payload = (new EventResource($event))->resolve();
+
+        event(new CommunicationEntityChanged('event', 'updated', $payload));
+
+        return $this->response->success(new EventResource($event), 'Event updated successfully');
+    }
+
+    public function destroy(string $id)
+    {
+        $this->service->deleteEvent($id);
+        
+        event(new CommunicationEntityChanged('event', 'deleted', ['id' => $id]));
+
+        return $this->response->success(null, 'Event deleted successfully');
+    }
 }

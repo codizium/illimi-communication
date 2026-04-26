@@ -17,6 +17,7 @@ class NoticePost extends BaseModel
         'organization_id',
         'title',
         'description',
+        'category',
         'published_at',
         'is_pinned',
         'created_by',

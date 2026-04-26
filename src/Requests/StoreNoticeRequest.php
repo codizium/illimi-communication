@@ -16,6 +16,7 @@ class StoreNoticeRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
+            'category' => ['nullable', 'string', 'max:50'],
             'published_at' => ['nullable', 'date'],
             'is_pinned' => ['nullable', 'boolean'],
         ];

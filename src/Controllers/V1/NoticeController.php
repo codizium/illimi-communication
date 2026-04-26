@@ -34,4 +34,23 @@ class NoticeController extends BaseController
 
         return $this->response->success(new NoticePostResource($notice), 'Notice created successfully', 201);
     }
+
+    public function update(Request $request, string $id)
+    {
+        $notice = $this->service->updateNotice($id, $request->all());
+        $payload = (new NoticePostResource($notice))->resolve();
+
+        event(new CommunicationEntityChanged('notice', 'updated', $payload));
+
+        return $this->response->success(new NoticePostResource($notice), 'Notice updated successfully');
+    }
+
+    public function destroy(string $id)
+    {
+        $this->service->deleteNotice($id);
+        
+        event(new CommunicationEntityChanged('notice', 'deleted', ['id' => $id]));
+
+        return $this->response->success(null, 'Notice deleted successfully');
+    }
 }

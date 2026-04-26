@@ -35,8 +35,6 @@ class MessagingService
                 'participants.user',
                 'latestMessage.sender',
                 'latestMessage.attachments',
-                'latestMessage.deliveries.user',
-                'latestMessage.reads.user',
             ])
             ->withCount('participants')
             ->whereHas('participants', fn (Builder $query) => $query->where('user_id', $this->userId()));
@@ -44,14 +42,10 @@ class MessagingService
 
     public function listConversations(int $perPage = 15): LengthAwarePaginator
     {
-        $paginator = $this->conversationQuery()
+        return $this->conversationQuery()
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
             ->paginate($perPage);
-
-        $this->markDeliveredForConversations(collect($paginator->items())->pluck('id')->filter()->all());
-
-        return $paginator;
     }
 
     public function createConversation(array $data): Conversation
@@ -95,7 +89,8 @@ class MessagingService
                 ]);
             }
 
-            return $this->findConversation($conversation->id) ?? $conversation;
+            // Just load basic participants and user info, avoid the deep latestMessage chain for now
+            return $conversation->load(['participants.user']);
         });
     }
 
@@ -113,7 +108,7 @@ class MessagingService
         }
 
         return Message::query()
-            ->with(['sender', 'conversation.participants', 'attachments', 'deliveries.user', 'reads.user'])
+            ->with(['sender', 'attachments', 'deliveries.user', 'reads.user', 'conversation' => fn($q) => $q->withCount('participants')])
             ->withCount(['deliveries', 'reads'])
             ->where('conversation_id', $conversationId)
             ->orderByDesc('created_at')
@@ -161,7 +156,7 @@ class MessagingService
     public function findMessage(string $id): ?Message
     {
         return Message::query()
-            ->with(['sender', 'conversation.participants', 'attachments', 'deliveries.user', 'reads.user'])
+            ->with(['sender', 'attachments', 'deliveries.user', 'reads.user', 'conversation' => fn($q) => $q->withCount('participants')])
             ->withCount(['deliveries', 'reads'])
             ->find($id);
     }
@@ -190,25 +185,20 @@ class MessagingService
         $messages = Message::query()
             ->where('conversation_id', $conversationId)
             ->where('sender_id', '!=', $userId)
+            ->whereDoesntHave('deliveries', fn ($query) => $query->where('user_id', $userId))
             ->get(['id', 'organization_id']);
 
         $created = collect();
 
         foreach ($messages as $message) {
-            $delivery = MessageDelivery::query()->firstOrCreate(
-                [
-                    'message_id' => $message->id,
-                    'user_id' => $userId,
-                ],
-                [
-                    'organization_id' => $message->organization_id,
-                    'delivered_at' => now(),
-                ]
-            );
+            $delivery = MessageDelivery::create([
+                'organization_id' => $message->organization_id,
+                'message_id' => $message->id,
+                'user_id' => $userId,
+                'delivered_at' => now(),
+            ]);
 
-            if ($delivery->wasRecentlyCreated) {
-                $created->push($delivery->load('user'));
-            }
+            $created->push($delivery->load('user'));
         }
 
         return $created;
@@ -226,25 +216,20 @@ class MessagingService
         $messages = Message::query()
             ->where('conversation_id', $conversationId)
             ->where('sender_id', '!=', $userId)
+            ->whereDoesntHave('reads', fn ($query) => $query->where('user_id', $userId))
             ->get(['id', 'organization_id']);
 
         $changedReads = collect();
 
         foreach ($messages as $message) {
-            $read = MessageRead::query()->updateOrCreate(
-                [
-                    'message_id' => $message->id,
-                    'user_id' => $userId,
-                ],
-                [
-                    'organization_id' => $message->organization_id,
-                    'read_at' => now(),
-                ]
-            );
+            $read = MessageRead::create([
+                'organization_id' => $message->organization_id,
+                'message_id' => $message->id,
+                'user_id' => $userId,
+                'read_at' => now(),
+            ]);
 
-            if ($read->wasRecentlyCreated || $read->wasChanged('read_at')) {
-                $changedReads->push($read->load('user'));
-            }
+            $changedReads->push($read->load('user'));
         }
 
         return $changedReads;
@@ -261,5 +246,25 @@ class MessagingService
         $conversation->update(['is_archived' => true]);
 
         return $this->findConversation($conversationId);
+    }
+
+    public function clearMessages(string $conversationId): bool
+    {
+        $conversation = $this->findConversation($conversationId);
+        if (!$conversation) return false;
+
+        return Message::where('conversation_id', $conversationId)->delete();
+    }
+
+    public function deleteConversation(string $conversationId): bool
+    {
+        $conversation = $this->findConversation($conversationId);
+        if (!$conversation) return false;
+
+        return DB::transaction(function () use ($conversation) {
+            Message::where('conversation_id', $conversation->id)->delete();
+            ConversationParticipant::where('conversation_id', $conversation->id)->delete();
+            return $conversation->delete();
+        });
     }
 }

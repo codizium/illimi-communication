@@ -14,9 +14,7 @@ class MessageResource extends JsonResource
         $attachments = $this->resource->relationLoaded('attachments')
             ? $this->resource->getRelation('attachments')
             : collect();
-        $participantsCount = (int) ($this->conversation?->participants_count
-            ?? $this->conversation?->participants?->count()
-            ?? 0);
+        $participantsCount = (int) ($this->conversation?->participants_count ?? 0);
         $recipientsCount = max(0, $participantsCount - 1);
         $deliveredToCount = collect($deliveries)
             ->pluck('user_id')

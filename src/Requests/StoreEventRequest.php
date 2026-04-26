@@ -16,6 +16,8 @@ class StoreEventRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', 'string', 'in:draft,published,ongoing,completed,cancelled'],
             'starts_at' => ['required', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
             'location' => ['nullable', 'string', 'max:255'],
