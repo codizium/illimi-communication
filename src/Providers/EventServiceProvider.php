@@ -9,9 +9,7 @@ use Illimi\Communication\Listeners\NotifyCommunicationChange;
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
-        CommunicationEntityChanged::class => [
-            NotifyCommunicationChange::class,
-        ],
+        // Organization-wide broadcasting is handled directly by the event
     ];
 
     public function boot(): void

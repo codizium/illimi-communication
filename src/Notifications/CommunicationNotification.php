@@ -22,7 +22,7 @@ class CommunicationNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['broadcast'];
     }
 
     public function toArray(object $notifiable): array

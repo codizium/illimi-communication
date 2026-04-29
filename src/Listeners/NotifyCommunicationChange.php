@@ -28,21 +28,17 @@ class NotifyCommunicationChange implements ShouldQueue
         
         $actorId = auth()->id();
 
-        // Get all users in the organization except the actor
-        $recipients = User::query()
+        // Use chunking for large organizations to avoid memory exhaustion
+        User::query()
             ->where('organization_id', $organizationId)
             ->where('id', '!=', $actorId)
-            ->get();
-
-        if ($recipients->isEmpty()) {
-            return;
-        }
-
-        Notification::send($recipients, new CommunicationNotification($title, $body, $type, [
-            'id' => $event->payload['id'],
-            'category' => $event->payload['category'] ?? 'General',
-            'entity' => $event->entity
-        ]));
+            ->chunk(200, function ($recipients) use ($title, $body, $type, $event) {
+                Notification::send($recipients, new CommunicationNotification($title, $body, $type, [
+                    'id' => $event->payload['id'],
+                    'category' => $event->payload['category'] ?? 'General',
+                    'entity' => $event->entity
+                ]));
+            });
     }
 
     protected function getNotificationTitle(CommunicationEntityChanged $event): string

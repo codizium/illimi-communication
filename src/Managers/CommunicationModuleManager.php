@@ -13,7 +13,7 @@ class CommunicationModuleManager
                 'route' => 'communication.messenger',
             ],
             [
-                'label' => 'Events',
+                'label' => 'Calender',
                 'icon' => 'ri-calendar-event-line',
                 'route' => 'communication.events',
             ],
