@@ -12,10 +12,22 @@ use Illimi\Communication\Services\NoticeService;
 
 class NoticeController extends BaseController
 {
+    /** Roles that are NOT allowed to create/modify school-wide notices. */
+    private const RESTRICTED_ROLES = ['student', 'parent'];
+
     public function __construct(
         protected NoticeService $service,
         protected CoreJsonResponse $response
     ) {
+    }
+
+    private function authorizeStaffOnly(): ?\Illuminate\Http\JsonResponse
+    {
+        $user = auth()->user();
+        if ($user && method_exists($user, 'hasRole') && $user->hasRole(self::RESTRICTED_ROLES)) {
+            return $this->response->error('You do not have permission to perform this action.', 403);
+        }
+        return null;
     }
 
     public function index(Request $request)
@@ -27,6 +39,8 @@ class NoticeController extends BaseController
 
     public function store(StoreNoticeRequest $request)
     {
+        if ($deny = $this->authorizeStaffOnly()) return $deny;
+
         $notice = $this->service->createNotice($request->validated());
         $payload = (new NoticePostResource($notice))->resolve();
 
@@ -37,6 +51,8 @@ class NoticeController extends BaseController
 
     public function update(Request $request, string $id)
     {
+        if ($deny = $this->authorizeStaffOnly()) return $deny;
+
         $notice = $this->service->updateNotice($id, $request->all());
         $payload = (new NoticePostResource($notice))->resolve();
 
@@ -47,6 +63,8 @@ class NoticeController extends BaseController
 
     public function destroy(string $id)
     {
+        if ($deny = $this->authorizeStaffOnly()) return $deny;
+
         $this->service->deleteNotice($id);
         
         event(new CommunicationEntityChanged('notice', 'deleted', ['id' => $id]));

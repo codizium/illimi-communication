@@ -2,7 +2,6 @@
 
 namespace Illimi\Communication\Controllers\Web;
 
-use Codizium\Core\Models\Organization;
 use Codizium\Core\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -15,7 +14,7 @@ use Illimi\Communication\Resources\NoticePostResource;
 
 class CommunicationWebController
 {
-    public function messenger(Organization $org): \Inertia\Response
+    public function messenger(): \Inertia\Response
     {
         return \Inertia\Inertia::render('Communication/Messenger', [
             'apiBase' => '/api/v1/communication',

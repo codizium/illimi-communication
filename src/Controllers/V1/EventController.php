@@ -12,10 +12,22 @@ use Illimi\Communication\Services\EventService;
 
 class EventController extends BaseController
 {
+    /** Roles that are NOT allowed to create/modify institutional events. */
+    private const RESTRICTED_ROLES = ['student', 'parent'];
+
     public function __construct(
         protected EventService $service,
         protected CoreJsonResponse $response
     ) {
+    }
+
+    private function authorizeStaffOnly(): ?\Illuminate\Http\JsonResponse
+    {
+        $user = auth()->user();
+        if ($user && method_exists($user, 'hasRole') && $user->hasRole(self::RESTRICTED_ROLES)) {
+            return $this->response->error('You do not have permission to perform this action.', 403);
+        }
+        return null;
     }
 
     public function index(Request $request)
@@ -27,6 +39,8 @@ class EventController extends BaseController
 
     public function store(StoreEventRequest $request)
     {
+        if ($deny = $this->authorizeStaffOnly()) return $deny;
+
         $event = $this->service->createEvent($request->validated());
         $payload = (new EventResource($event))->resolve();
 
@@ -37,6 +51,8 @@ class EventController extends BaseController
 
     public function update(Request $request, string $id)
     {
+        if ($deny = $this->authorizeStaffOnly()) return $deny;
+
         $event = $this->service->updateEvent($id, $request->all());
         $payload = (new EventResource($event))->resolve();
 
@@ -47,6 +63,8 @@ class EventController extends BaseController
 
     public function destroy(string $id)
     {
+        if ($deny = $this->authorizeStaffOnly()) return $deny;
+
         $this->service->deleteEvent($id);
         
         event(new CommunicationEntityChanged('event', 'deleted', ['id' => $id]));
