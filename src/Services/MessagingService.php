@@ -65,6 +65,20 @@ class MessagingService
             ? ConversationTypeEnum::Group->value
             : ConversationTypeEnum::Direct->value);
 
+        // For direct messages, check if a conversation already exists
+        if ($type === ConversationTypeEnum::Direct->value && $participantIds->count() === 2) {
+            $existing = Conversation::query()
+                ->where('type', ConversationTypeEnum::Direct->value)
+                ->whereHas('participants', fn($q) => $q->where('user_id', $participantIds[0]))
+                ->whereHas('participants', fn($q) => $q->where('user_id', $participantIds[1]))
+                ->whereCount('participants', 2)
+                ->first();
+
+            if ($existing) {
+                return $existing->load(['participants.user']);
+            }
+        }
+
         return DB::transaction(function () use ($data, $participantIds, $users, $type, $authUserId) {
             $conversation = Conversation::create([
                 'organization_id' => $this->organizationId(),
