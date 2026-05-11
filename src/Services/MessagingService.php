@@ -71,7 +71,7 @@ class MessagingService
                 ->where('type', ConversationTypeEnum::Direct->value)
                 ->whereHas('participants', fn($q) => $q->where('user_id', $participantIds[0]))
                 ->whereHas('participants', fn($q) => $q->where('user_id', $participantIds[1]))
-                ->whereCount('participants', 2)
+                ->has('participants', '=', 2)
                 ->first();
 
             if ($existing) {
