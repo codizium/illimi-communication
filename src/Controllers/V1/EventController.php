@@ -32,7 +32,9 @@ class EventController extends BaseController
 
     public function index(Request $request)
     {
-        $events = $this->service->listEvents((int) $request->query('per_page', 20));
+        $perPage = (int) $request->query('per_page', 20);
+        $perPage = max(1, min(50, $perPage));
+        $events = $this->service->listEvents($perPage);
 
         return $this->response->success(EventResource::collection($events), 'Events retrieved successfully');
     }

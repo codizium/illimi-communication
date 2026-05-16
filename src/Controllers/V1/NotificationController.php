@@ -14,9 +14,11 @@ class NotificationController extends BaseController
 
     public function index(Request $request)
     {
+        $perPage = (int) $request->query('per_page', 20);
+        $perPage = max(1, min(50, $perPage));
         $notifications = $request->user()
             ->notifications()
-            ->paginate($request->query('per_page', 20));
+            ->paginate($perPage);
 
         return $this->response->success($notifications, 'Notifications retrieved successfully');
     }

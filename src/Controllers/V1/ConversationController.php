@@ -29,7 +29,9 @@ class ConversationController extends BaseController
     public function index(Request $request)
     {
         $this->touchPresence($request);
-        $conversations = $this->service->listConversations((int) $request->query('per_page', 15));
+        $perPage = (int) $request->query('per_page', 15);
+        $perPage = max(1, min(50, $perPage));
+        $conversations = $this->service->listConversations($perPage);
 
         return $this->response->success(ConversationResource::collection($conversations), 'Conversations retrieved successfully');
     }
@@ -50,7 +52,9 @@ class ConversationController extends BaseController
         $this->touchPresence($request);
         $deliveries = $this->service->markConversationDelivered($id);
         $this->broadcastDeliveries($deliveries, $id);
-        $messages = $this->service->listMessages($id, (int) $request->query('per_page', 50));
+        $perPage = (int) $request->query('per_page', 50);
+        $perPage = max(1, min(100, $perPage));
+        $messages = $this->service->listMessages($id, $perPage);
 
         if (! $messages) {
             return $this->response->error('Conversation not found', 404);

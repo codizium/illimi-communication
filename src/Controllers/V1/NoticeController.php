@@ -32,7 +32,9 @@ class NoticeController extends BaseController
 
     public function index(Request $request)
     {
-        $notices = $this->service->listNotices((int) $request->query('per_page', 20));
+        $perPage = (int) $request->query('per_page', 20);
+        $perPage = max(1, min(50, $perPage));
+        $notices = $this->service->listNotices($perPage);
 
         return $this->response->success(NoticePostResource::collection($notices), 'Notices retrieved successfully');
     }
