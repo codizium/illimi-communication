@@ -4,10 +4,13 @@ namespace Illimi\Communication\Controllers\V1;
 
 use Codizium\Core\Controllers\BaseController;
 use Codizium\Core\Helpers\CoreJsonResponse;
+use Codizium\Core\Traits\SecureResponse;
 use Illuminate\Http\Request;
 
 class NotificationController extends BaseController
 {
+    use SecureResponse;
+
     public function __construct(protected CoreJsonResponse $response)
     {
     }
@@ -20,7 +23,7 @@ class NotificationController extends BaseController
             ->notifications()
             ->paginate($perPage);
 
-        return $this->response->success($notifications, 'Notifications retrieved successfully');
+        return $this->respondWithSecurity($notifications, 'Notifications retrieved successfully', 200, $request);
     }
 
     public function markAsRead(Request $request, string $id)
@@ -28,20 +31,20 @@ class NotificationController extends BaseController
         $notification = $request->user()->notifications()->findOrFail($id);
         $notification->markAsRead();
 
-        return $this->response->success(null, 'Notification marked as read');
+        return $this->respondWithSecurity(null, 'Notification marked as read', 200, $request);
     }
 
     public function markAllAsRead(Request $request)
     {
         $request->user()->unreadNotifications->markAsRead();
 
-        return $this->response->success(null, 'All notifications marked as read');
+        return $this->respondWithSecurity(null, 'All notifications marked as read', 200, $request);
     }
 
     public function unreadCount(Request $request)
     {
         $count = $request->user()->unreadNotifications()->count();
         
-        return $this->response->success(['count' => $count], 'Unread count retrieved');
+        return $this->respondWithSecurity(['count' => $count], 'Unread count retrieved', 200, $request);
     }
 }

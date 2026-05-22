@@ -4,6 +4,7 @@ namespace Illimi\Communication\Controllers\V1;
 
 use Codizium\Core\Controllers\BaseController;
 use Codizium\Core\Helpers\CoreJsonResponse;
+use Codizium\Core\Traits\SecureResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Codizium\Core\Models\User;
@@ -19,6 +20,8 @@ use Illimi\Communication\Services\PresenceService;
 
 class ConversationController extends BaseController
 {
+    use SecureResponse;
+
     public function __construct(
         protected MessagingService $service,
         protected CoreJsonResponse $response,
@@ -33,7 +36,7 @@ class ConversationController extends BaseController
         $perPage = max(1, min(50, $perPage));
         $conversations = $this->service->listConversations($perPage);
 
-        return $this->response->success(ConversationResource::collection($conversations), 'Conversations retrieved successfully');
+        return $this->respondWithSecurity(ConversationResource::collection($conversations), 'Conversations retrieved successfully', 200, $request);
     }
 
     public function store(StartConversationRequest $request)
@@ -44,7 +47,7 @@ class ConversationController extends BaseController
 
         event(new CommunicationEntityChanged('conversation', 'created', $payload));
 
-        return $this->response->success(new ConversationResource($conversation), 'Conversation created successfully', 201);
+        return $this->respondWithSecurity(new ConversationResource($conversation), 'Conversation created successfully', 201, $request);
     }
 
     public function messages(Request $request, string $id)
@@ -57,10 +60,10 @@ class ConversationController extends BaseController
         $messages = $this->service->listMessages($id, $perPage);
 
         if (! $messages) {
-            return $this->response->error('Conversation not found', 404);
+            return $this->respondErrorWithSecurity('Conversation not found', 404, [], $request);
         }
 
-        return $this->response->success(MessageResource::collection($messages), 'Messages retrieved successfully');
+        return $this->respondWithSecurity(MessageResource::collection($messages), 'Messages retrieved successfully', 200, $request);
     }
 
     public function sendMessage(SendMessageRequest $request, string $id)
@@ -69,23 +72,23 @@ class ConversationController extends BaseController
         $message = $this->service->sendMessage($id, $request->validated());
 
         if (! $message) {
-            return $this->response->error('Conversation not found', 404);
+            return $this->respondErrorWithSecurity('Conversation not found', 404, [], $request);
         }
 
         $payload = (new MessageResource($message))->resolve();
 
         event(new CommunicationEntityChanged('message', 'created', $payload));
 
-        return $this->response->success(new MessageResource($message), 'Message sent successfully', 201);
+        return $this->respondWithSecurity(new MessageResource($message), 'Message sent successfully', 201, $request);
     }
 
-    public function markRead(string $id)
+    public function markRead(Request $request, string $id)
     {
-        $this->touchPresence(request());
+        $this->touchPresence($request);
         $reads = $this->service->markConversationRead($id);
 
         if ($reads === null) {
-            return $this->response->error('Conversation not found', 404);
+            return $this->respondErrorWithSecurity('Conversation not found', 404, [], $request);
         }
 
         $payload = [
@@ -98,46 +101,46 @@ class ConversationController extends BaseController
             event(new CommunicationEntityChanged('message_read', 'updated', $payload));
         }
 
-        return $this->response->success($payload, 'Conversation marked as read');
+        return $this->respondWithSecurity($payload, 'Conversation marked as read', 200, $request);
     }
 
-    public function archive(string $id)
+    public function archive(Request $request, string $id)
     {
-        $this->touchPresence(request());
+        $this->touchPresence($request);
         $conversation = $this->service->archiveConversation($id);
 
         if (! $conversation) {
-            return $this->response->error('Conversation not found', 404);
+            return $this->respondErrorWithSecurity('Conversation not found', 404, [], $request);
         }
 
         $payload = (new ConversationResource($conversation))->resolve();
 
         event(new CommunicationEntityChanged('conversation', 'archived', $payload));
 
-        return $this->response->success(new ConversationResource($conversation), 'Conversation archived successfully');
+        return $this->respondWithSecurity(new ConversationResource($conversation), 'Conversation archived successfully', 200, $request);
     }
 
-    public function clearMessages(string $id)
+    public function clearMessages(Request $request, string $id)
     {
         $success = $this->service->clearMessages($id);
         return $success 
-            ? $this->response->success(null, 'Messages cleared successfully')
-            : $this->response->error('Failed to clear messages');
+            ? $this->respondWithSecurity(null, 'Messages cleared successfully', 200, $request)
+            : $this->respondErrorWithSecurity('Failed to clear messages', 400, [], $request);
     }
 
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         $success = $this->service->deleteConversation($id);
         return $success 
-            ? $this->response->success(null, 'Conversation deleted successfully')
-            : $this->response->error('Failed to delete conversation');
+            ? $this->respondWithSecurity(null, 'Conversation deleted successfully', 200, $request)
+            : $this->respondErrorWithSecurity('Failed to delete conversation', 400, [], $request);
     }
 
     public function searchUsers(Request $request)
     {
         $query = $request->query('q');
         if (!$query || strlen($query) < 2) {
-            return $this->response->success([], 'Query too short');
+            return $this->respondWithSecurity([], 'Query too short', 200, $request);
         }
 
         $organizationId = $request->get('organization_id') ?: auth()->user()?->organization_id;
@@ -164,14 +167,14 @@ class ConversationController extends BaseController
                 ]);
         });
 
-        return $this->response->success($users, 'Users retrieved successfully');
+        return $this->respondWithSecurity($users, 'Users retrieved successfully', 200, $request);
     }
 
     public function heartbeat(Request $request)
     {
         $payload = $this->touchPresence($request);
 
-        return $this->response->success($payload, 'Presence updated successfully');
+        return $this->respondWithSecurity($payload, 'Presence updated successfully', 200, $request);
     }
 
     protected function touchPresence(Request $request): array
